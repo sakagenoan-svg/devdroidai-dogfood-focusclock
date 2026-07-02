@@ -1,6 +1,7 @@
 package com.dogfood.focusclock.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dogfood.focusclock.service.TimerForegroundService
 import com.dogfood.focusclock.state.Phase
 import com.dogfood.focusclock.state.PomodoroConfig
 import com.dogfood.focusclock.state.TimerEvent
@@ -51,7 +53,7 @@ class SettingsStore(private val store: DataStore<Preferences>) {
     }
 }
 
-class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
+class FocusViewModel(private val settings: SettingsStore, private val context: Context) : ViewModel() {
 
     private var machine = TimerMachine()
     private var ticker: Job? = null
@@ -69,6 +71,7 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
     fun start() {
         send(TimerEvent.Start)
         ensureTicker()
+        startForegroundService()
     }
 
     fun pause() = send(TimerEvent.Pause)
@@ -81,6 +84,24 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
         send(TimerEvent.Reset)
         ticker?.cancel()
         ticker = null
+        stopForegroundService()
+    }
+
+    /**
+     * Starts the foreground service to keep the timer visible on the lock screen.
+     * Called when the timer transitions to Running state.
+     */
+    private fun startForegroundService() {
+        val intent = Intent(context, TimerForegroundService::class.java)
+        context.startService(intent)
+    }
+
+    /**
+     * Stops the foreground service when the timer is reset or destroyed.
+     */
+    private fun stopForegroundService() {
+        val intent = Intent(context, TimerForegroundService::class.java)
+        context.stopService(intent)
     }
 
     private fun ensureTicker() {
