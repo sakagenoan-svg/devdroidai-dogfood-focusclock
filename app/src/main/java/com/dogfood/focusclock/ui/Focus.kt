@@ -64,6 +64,12 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
             val minutes = settings.focusMinutes()
             machine = TimerMachine(PomodoroConfig(focusSec = minutes * 60))
         }
+        // Update shared state for Service observation
+        viewModelScope.launch {
+            _state.collect { newState ->
+                _currentStateShared.value = newState
+            }
+        }
     }
 
     fun start() {
@@ -97,6 +103,12 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
 
     private fun send(event: TimerEvent) {
         _state.value = machine.transition(_state.value, event)
+    }
+
+    companion object {
+        // Shared StateFlow for Service observation. TimerForegroundService monitors this.
+        private val _currentStateShared = MutableStateFlow<TimerState>(TimerState.Idle)
+        val currentStateShared: StateFlow<TimerState> = _currentStateShared.asStateFlow()
     }
 }
 
