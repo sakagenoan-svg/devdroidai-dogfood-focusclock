@@ -22,6 +22,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dogfood.focusclock.service.TimerForegroundService
 import com.dogfood.focusclock.state.Phase
 import com.dogfood.focusclock.state.PomodoroConfig
 import com.dogfood.focusclock.state.TimerEvent
@@ -51,7 +52,7 @@ class SettingsStore(private val store: DataStore<Preferences>) {
     }
 }
 
-class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
+class FocusViewModel(private val settings: SettingsStore, private val context: Context) : ViewModel() {
 
     private var machine = TimerMachine()
     private var ticker: Job? = null
@@ -69,18 +70,25 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
     fun start() {
         send(TimerEvent.Start)
         ensureTicker()
+        updateForegroundService()
     }
 
-    fun pause() = send(TimerEvent.Pause)
+    fun pause() {
+        send(TimerEvent.Pause)
+        updateForegroundService()
+    }
+
     fun resume() {
         send(TimerEvent.Resume)
         ensureTicker()
+        updateForegroundService()
     }
 
     fun reset() {
         send(TimerEvent.Reset)
         ticker?.cancel()
         ticker = null
+        stopForegroundService()
     }
 
     private fun ensureTicker() {
@@ -90,6 +98,7 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
                 delay(1_000)
                 if (_state.value is TimerState.Running) {
                     send(TimerEvent.Tick)
+                    updateForegroundService()
                 }
             }
         }
@@ -97,6 +106,25 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
 
     private fun send(event: TimerEvent) {
         _state.value = machine.transition(_state.value, event)
+    }
+
+    /**
+     * Update or start the foreground service with the current timer state.
+     */
+    private fun updateForegroundService() {
+        val state = _state.value
+        if (state is TimerState.Running) {
+            val timerText = formatClock(state.remainingSec)
+            val phase = state.phase.display()
+            TimerForegroundService.start(context, timerText, phase)
+        }
+    }
+
+    /**
+     * Stop the foreground service.
+     */
+    private fun stopForegroundService() {
+        TimerForegroundService.stop(context)
     }
 }
 
