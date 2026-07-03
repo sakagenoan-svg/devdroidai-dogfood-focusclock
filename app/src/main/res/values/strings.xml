@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">FocusClock</string>
+
+    <!-- Phase names -->
+    <string name="phase_focus">Focus</string>
+    <string name="phase_short_break">Short break</string>
+    <string name="phase_long_break">Long break</string>
+
+    <!-- Notification channel -->
+    <string name="notification_channel_description">Timer notifications for Pomodoro sessions</string>
+
+    <!-- Notification titles and texts -->
+    <string name="notification_title_idle">Ready</string>
+    <string name="notification_text_idle">Tap to start your focus session</string>
+    <string name="notification_text_running">Completed: %d focus sessions</string>
+    <string name="notification_text_paused">Paused • Completed: %d focus sessions</string>
 </resources>
