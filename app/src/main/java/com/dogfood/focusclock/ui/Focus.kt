@@ -1,6 +1,7 @@
 package com.dogfood.focusclock.ui
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dogfood.focusclock.service.TimerService
 import com.dogfood.focusclock.state.Phase
 import com.dogfood.focusclock.state.PomodoroConfig
 import com.dogfood.focusclock.state.TimerEvent
@@ -51,7 +53,10 @@ class SettingsStore(private val store: DataStore<Preferences>) {
     }
 }
 
-class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
+class FocusViewModel(
+    private val settings: SettingsStore,
+    private val appContext: Context,
+) : ViewModel() {
 
     private var machine = TimerMachine()
     private var ticker: Job? = null
@@ -69,9 +74,11 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
     fun start() {
         send(TimerEvent.Start)
         ensureTicker()
+        startTimerService()
     }
 
     fun pause() = send(TimerEvent.Pause)
+
     fun resume() {
         send(TimerEvent.Resume)
         ensureTicker()
@@ -81,6 +88,7 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
         send(TimerEvent.Reset)
         ticker?.cancel()
         ticker = null
+        stopTimerService()
     }
 
     private fun ensureTicker() {
@@ -97,6 +105,16 @@ class FocusViewModel(private val settings: SettingsStore) : ViewModel() {
 
     private fun send(event: TimerEvent) {
         _state.value = machine.transition(_state.value, event)
+    }
+
+    private fun startTimerService() {
+        val intent = Intent(appContext, TimerService::class.java)
+        appContext.startService(intent)
+    }
+
+    private fun stopTimerService() {
+        val intent = Intent(appContext, TimerService::class.java)
+        appContext.stopService(intent)
     }
 }
 
